@@ -12,7 +12,7 @@ app.use(express.json());
 // crud
 
 // ==========mongo connection code============
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.kxlelta.mongodb.net/?retryWrites=true&w=majority`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -28,7 +28,46 @@ async function run() {
     await client.connect();
     // create new db for this project and new collection for data:
     const coffeeCollection = client.db("coffeeDB").collection("coffee");
-    
+    // get collection:
+    app.get('/coffee',async (req, res) => {
+      const cursor = coffeeCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+
+    // update er jonno first a single data get korte hoi:
+    app.get('/coffee/:id',async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId (id)};
+      const result = await coffeeCollection.findOne(query);
+    res.send(result);
+
+    })
+
+    // finally updated data need to send to database:
+
+    app.put('/coffee/:id', async(req, res) => {
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)}
+      const options = { upsert: true };
+      const updatedCoffee = req.body;
+
+      const coffee = {
+          $set: {
+              name: updatedCoffee.name, 
+              quantity: updatedCoffee.quantity, 
+              supplier: updatedCoffee.supplier, 
+              taste: updatedCoffee.taste, 
+              category: updatedCoffee.category, 
+              details: updatedCoffee.details, 
+              photo: updatedCoffee.photo
+          }
+      }
+
+      const result = await coffeeCollection.updateOne(filter, coffee, options);
+      res.send(result);
+  })
+
   //  post coffee details to mongo:
    app.post('/coffee',async(req,res)=>{
     const newCoffee =req.body;
@@ -36,6 +75,14 @@ async function run() {
     const result = await coffeeCollection.insertOne(newCoffee);
     res.send(result);
    })
+
+  //  delete method:
+  app.delete('/coffee/:id', async(req, res) => {
+    const id = req.params.id;
+    const query = {_id: new ObjectId (id)};
+    const result = await coffeeCollection.deleteOne(query);
+    res.send(result);
+  })
 
 
     // Send a ping to confirm a successful connection
